@@ -1,0 +1,47 @@
+#!/usr/bin/env bash -eoux pipefail
+
+mkdir frameworks
+zip -r frameworks/Jigra.xcframework.zip Jigra.xcframework
+zip -r frameworks/Cordova.xcframework.zip Cordova.xcframework
+
+write_package_file() {
+	cat <<EOF >Package.swift
+// swift-tools-version:5.3
+
+import PackageDescription
+
+let package = Package(
+    name: "jigra-swift-pm",
+    products: [
+        .library(
+            name: "Jigra",
+            targets: ["Jigra"]
+        ),
+        .library(
+            name: "Cordova",
+            targets: ["Cordova"]
+        )
+    ],
+    dependencies: [],
+    targets: [
+        .binaryTarget(
+            name: "Jigra",
+            url: "$1",
+            checksum: "$2"
+        ),
+        .binaryTarget(
+            name: "Cordova",
+            url: "$3",
+            checksum: "$4"
+        )
+    ]
+)
+EOF
+}
+
+jig_url="https://github.com/familyjs/jigra-swift-pm/releases/download/$1/Jigra.xcframework.zip"
+jig_sha=$(shasum -a 256 frameworks/Jigra.xcframework.zip | sed 's/ /\n/g' | head -n1 | xargs echo -n)
+jig_cordova_url="https://github.com/familyjs/jigra-swift-pm/releases/download/$1/Cordova.xcframework.zip"
+jig_cordova_sha=$(shasum -a 256 frameworks/Cordova.xcframework.zip | sed 's/ /\n/g' | head -n1 | xargs echo -n)
+
+write_package_file $jig_url $jig_sha $jig_cordova_url $jig_cordova_sha

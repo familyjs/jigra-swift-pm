@@ -1,0 +1,6 @@
+jigra-checkout
+*.xcframework
+*.zip
+.swiftpm
+frameworks
+

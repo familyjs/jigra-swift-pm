@@ -1,0 +1,56 @@
+#!/usr/bin/env bash -eoux pipefail
+
+build_jigra_simulator() {
+	xcodebuild archive \
+		-scheme Jigra \
+		-workspace Jigra.xcworkspace \
+		-destination "generic/platform=iOS Simulator" \
+		-archivePath ./Build/iOS-Simulator \
+		-configuration Release \
+		SKIP_INSTALL=NO \
+		BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+}
+
+build_jigra_ios() {
+	xcodebuild archive \
+		-scheme Jigra \
+		-workspace Jigra.xcworkspace \
+		-destination "generic/platform=iOS" \
+		-archivePath ./Build/iOS \
+		SKIP_INSTALL=NO \
+		SWIFT_SERIALIZE_DEBUGGING_OPTIONS=NO \
+		DEBUG_INFORMATION_FORMAT="dwarf-with-dsym" \
+		BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+}
+
+create_xcframeworks() {
+	build_jigra_simulator
+	build_jigra_ios
+
+	rm -rf ./Build/iOS-Simulator.xcarchive/Products/Library/Frameworks/Jigra.framework/Frameworks
+	rm -rf ./Build/iOS.xcarchive/Products/Library/Frameworks/Jigra.framework/Frameworks
+
+	xcodebuild -create-xcframework \
+		-framework ./Build/iOS-Simulator.xcarchive/Products/Library/Frameworks/Jigra.framework \
+		-debug-symbols $PWD/Build/iOS-Simulator.xcarchive/dSYMs/Jigra.framework.dSYM \
+		-framework ./Build/iOS.xcarchive/Products/Library/Frameworks/Jigra.framework \
+		-debug-symbols $PWD/Build/iOS.xcarchive/dSYMs/Jigra.framework.dSYM \
+		-output Jigra.xcframework
+
+	xcodebuild -create-xcframework \
+		-framework ./Build/iOS-Simulator.xcarchive/Products/Library/Frameworks/Cordova.framework \
+		-debug-symbols $PWD/Build/iOS-Simulator.xcarchive/dSYMs/Cordova.framework.dSYM \
+		-framework ./Build/iOS.xcarchive/Products/Library/Frameworks/Cordova.framework \
+		-debug-symbols $PWD/Build/iOS.xcarchive/dSYMs/Cordova.framework.dSYM \
+		-output Cordova.xcframework
+
+}
+
+git clone https://github.com/familyjs/jigra jigra-checkout
+cd jigra-checkout/ios/Jigra
+git checkout $1
+
+create_xcframeworks
+
+mv Jigra.xcframework ../../../
+mv Cordova.xcframework ../../../
